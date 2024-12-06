@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 from torch.utils.data import Dataset, DataLoader
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from sklearn.preprocessing import LabelEncoder
@@ -7,7 +8,9 @@ from sklearn.svm import SVC
 from PIL import Image
 import joblib
 
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 mtcnn = MTCNN(keep_all=True, device=device)
 inception_resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 dataset_path = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
@@ -68,13 +71,11 @@ known_face_embeddings = []
 for faces, label in dataloader:
     if faces is not None:
         try:
-            embeddings = inception_resnet(faces.to(device))
+            faces = faces.to(device)
+            embeddings = inception_resnet(faces)
             face_embeddings.append(embeddings.detach().cpu().numpy())
             known_face_embeddings.append(
-                inception_resnet(faces[0].unsqueeze(0).to(device))
-                .detach()
-                .cpu()
-                .numpy()
+                inception_resnet(faces[0].unsqueeze(0).to(device)).detach().cpu().numpy()
             )
             labels.append(label.numpy())
         except Exception as e:
@@ -95,8 +96,14 @@ else:
     svm_model = SVC(kernel="linear", probability=True)
     svm_model.fit(face_embeddings, labels)
 
-    np.save("D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy", dataset.label_encoder.classes_)
-    np.save("D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy", known_face_embeddings)
+    np.save(
+        "D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy",
+        dataset.label_encoder.classes_,
+    )
+    np.save(
+        "D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy",
+        known_face_embeddings,
+    )
     joblib.dump(svm_model, "D:/Project/StudentManagement/scripts/Model/svm_model.pkl")
 
     print("Model telah dilatih dan disimpan.")

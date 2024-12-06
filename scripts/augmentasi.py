@@ -4,11 +4,12 @@ from facenet_pytorch import MTCNN
 import numpy as np
 from imgaug import augmenters as iaa
 import shutil
+import torch
 
-dataset_dir = "D:/Project/StudentManagement/scripts/Images"
-output_dir = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
-detector = MTCNN()
+detector = MTCNN(device=device)
 seq = iaa.Sequential(
     [
         iaa.Fliplr(0.5),  # Horizontal flip
@@ -21,6 +22,9 @@ seq = iaa.Sequential(
         iaa.MultiplyHueAndSaturation((0.8, 1.2)),  # Jitter warna
     ]
 )
+
+dataset_dir = "D:/Project/StudentManagement/scripts/Images"
+output_dir = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
 
 def detect_and_crop_face(image_path):
     img = Image.open(image_path)
@@ -41,13 +45,13 @@ def detect_and_crop_face(image_path):
         return None
 
 
-def augment_and_save(face, person_name, base_filename, num_augments=5):
+def augment_and_save(face, person_name, base_filename, num_augments=10):
     person_folder = os.path.join(output_dir, person_name)
     if not os.path.exists(person_folder):
         os.makedirs(person_folder)
 
     original_filename = os.path.join(person_folder, f"{base_filename}_original.jpg")
-    face.save(original_filename)  # Simpan gambar asli
+    face.save(original_filename)
 
     for i in range(num_augments):
         augmented_face = seq(image=np.array(face))
@@ -114,7 +118,7 @@ def delete_images_without_faces(dataset_path):
                         os.remove(img_path)
                 except Exception as e:
                     print(f"Error processing {img_path}: {e}")
-    print("Deleting Selesai")
+    print("Deleting selesai.")
 
 
 if not os.path.exists(output_dir):
@@ -132,7 +136,3 @@ for person_name in os.listdir(dataset_dir):
 
 delete_images_without_faces(output_dir)
 print("Augmentasi selesai.")
-
-
-
-

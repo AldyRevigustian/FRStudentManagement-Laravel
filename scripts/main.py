@@ -186,7 +186,6 @@ while True:
         break
 
     frame_counter += 1
-
     if frame_counter % 3 != 0:
         continue
 
@@ -266,7 +265,7 @@ while True:
 
                 with torch.no_grad():
                     face_embedding = (
-                        inception_resnet(face_tensor.unsqueeze(0))
+                        inception_resnet(face_tensor.unsqueeze(0).to(device))
                         .detach()
                         .cpu()
                         .numpy()

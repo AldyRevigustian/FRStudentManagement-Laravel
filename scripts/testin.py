@@ -11,12 +11,17 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 from sklearn.metrics.pairwise import cosine_similarity
 import argparse
 from mysql.connector import pooling
+import gc
 
 parser = argparse.ArgumentParser(description="Mengambil argumen kelas dan mata kuliah")
 parser.add_argument("--selected_class_id", type=int, help="ID kelas yang dipilih")
 parser.add_argument("--selected_class_name", type=str, help="Nama kelas yang dipilih")
-parser.add_argument("--selected_course_id", type=int, help="ID mata kuliah yang dipilih")
-parser.add_argument("--selected_course_name", type=str, help="Nama mata kuliah yang dipilih")
+parser.add_argument(
+    "--selected_course_id", type=int, help="ID mata kuliah yang dipilih"
+)
+parser.add_argument(
+    "--selected_course_name", type=str, help="Nama mata kuliah yang dipilih"
+)
 args = parser.parse_args()
 
 selected_class_id = args.selected_class_id
@@ -33,7 +38,7 @@ dbconfig = {
 
 pool = pooling.MySQLConnectionPool(
     pool_name="student_management_pool",
-    pool_size= 5,
+    pool_size=5,
     **dbconfig,
 )
 
@@ -43,8 +48,12 @@ cursor = conn.cursor()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 inception_resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 svm_model = joblib.load("D:/Project/StudentManagement/scripts/Model/svm_model.pkl")
-label_encoder_classes = np.load("D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy")
-known_embeddings = np.load("D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy")
+label_encoder_classes = np.load(
+    "D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy"
+)
+known_embeddings = np.load(
+    "D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy"
+)
 
 mtcnn = MTCNN(
     keep_all=True,
@@ -80,7 +89,6 @@ predicted_name = "Unknown"
 mode_start_time = None
 current_student_info = None
 current_student_img = None
-detected_faces = {}
 
 
 def get_student_info(predicted_name):
@@ -178,8 +186,7 @@ while True:
         break
 
     frame_counter += 1
-
-    if frame_counter % 3 != 0:
+    if frame_counter % 5 != 0:
         continue
 
     current_time = time.time()
@@ -322,9 +329,11 @@ while True:
                 else:
                     detected_name = predicted_name
                     detected_time = current_time
+                del face_embedding, face_tensor, face, face_resized
 
     cv2.imshow("Face Recognition", frame_with_background)
 
+    gc.collect()
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 

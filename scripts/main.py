@@ -10,12 +10,18 @@ from PIL import Image, ImageDraw, ImageFont
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from sklearn.metrics.pairwise import cosine_similarity
 import argparse
+from mysql.connector import pooling
+import gc
 
 parser = argparse.ArgumentParser(description="Mengambil argumen kelas dan mata kuliah")
 parser.add_argument("--selected_class_id", type=int, help="ID kelas yang dipilih")
 parser.add_argument("--selected_class_name", type=str, help="Nama kelas yang dipilih")
-parser.add_argument("--selected_course_id", type=int, help="ID mata kuliah yang dipilih")
-parser.add_argument("--selected_course_name", type=str, help="Nama mata kuliah yang dipilih")
+parser.add_argument(
+    "--selected_course_id", type=int, help="ID mata kuliah yang dipilih"
+)
+parser.add_argument(
+    "--selected_course_name", type=str, help="Nama mata kuliah yang dipilih"
+)
 args = parser.parse_args()
 
 selected_class_id = args.selected_class_id
@@ -23,26 +29,50 @@ selected_class_name = args.selected_class_name
 selected_course_id = args.selected_course_id
 selected_course_name = args.selected_course_name
 
-conn = mysql.connector.connect(
-    host="localhost", user="root", password="", database="student_management"
+dbconfig = {
+    "host": "localhost",
+    "user": "root",
+    "password": "",
+    "database": "student_management",
+}
+
+pool = pooling.MySQLConnectionPool(
+    pool_name="student_management_pool",
+    pool_size=5,
+    **dbconfig,
 )
+
+conn = pool.get_connection()
 cursor = conn.cursor()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 inception_resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 svm_model = joblib.load("D:/Project/StudentManagement/scripts/Model/svm_model.pkl")
-label_encoder_classes = np.load("D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy")
-known_embeddings = np.load("D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy")
-mtcnn = MTCNN(keep_all=True, device=device)
+label_encoder_classes = np.load(
+    "D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy"
+)
+known_embeddings = np.load(
+    "D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy"
+)
+
+mtcnn = MTCNN(
+    keep_all=True,
+    device=device,
+    selection_method="largest",
+    post_process=False,
+)
 
 folderModePath = "D:/Project/StudentManagement/scripts/Resources/Modes"
 modePathList = os.listdir(folderModePath)
-imgBackground = cv2.imread("D:/Project/StudentManagement/scripts/Resources/background.png")
+imgBackground = cv2.imread(
+    "D:/Project/StudentManagement/scripts/Resources/background.png"
+)
 imgModeList = [cv2.imread(os.path.join(folderModePath, path)) for path in modePathList]
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 960)
 cap.set(4, 720)
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 cv2.namedWindow("Face Recognition", cv2.WINDOW_NORMAL)
 # cv2.namedWindow("Face Recognition", cv2.WINDOW_FULLSCREEN)
 cv2.resizeWindow("Face Recognition", 1920, 1080)
@@ -78,21 +108,6 @@ def get_student_info(predicted_name):
             print("Mahasiswa tidak ditemukan.")
             return None
 
-    except mysql.connector.Error as err:
-        print(f"Terjadi error: {err}")
-
-
-def insert_absensi(kelas_id, mata_kuliah_id, mahasiswa_id):
-    try:
-        query = """
-            INSERT INTO `absensis` (`kelas_id`, `mata_kuliah_id`, `mahasiswa_id`)
-            VALUES (%s, %s, %s);
-        """
-        cursor.execute(query, (kelas_id, mata_kuliah_id, mahasiswa_id))
-
-        conn.commit()
-        print("Data berhasil ditambahkan.")
-        return True
     except mysql.connector.Error as err:
         print(f"Terjadi error: {err}")
 
@@ -162,11 +177,18 @@ def get_box_area(box):
     return width * height
 
 
+frame_counter = 0
+
 while True:
     ret, frame = cap.read()
     if not ret:
         print("Failed to capture frame")
         break
+
+    frame_counter += 1
+
+    if frame_counter % 3 != 0:
+        continue
 
     current_time = time.time()
     frame_with_background = imgBackground.copy()
@@ -241,14 +263,21 @@ while True:
                 face_tensor = (
                     torch.from_numpy(face_resized).permute(2, 0, 1).float() / 255.0
                 ).to(device)
-                face_embedding = (
-                    inception_resnet(face_tensor.unsqueeze(0)).detach().cpu().numpy()
-                )
 
-                predicted_label = svm_model.predict(face_embedding)[0]
-                predicted_name = label_encoder_classes[predicted_label]
+                with torch.no_grad():
+                    face_embedding = (
+                        inception_resnet(face_tensor.unsqueeze(0))
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    )
+                    predicted_label = svm_model.predict(face_embedding)[0]
+                    predicted_name = label_encoder_classes[predicted_label]
 
-                similarity_scores = cosine_similarity(face_embedding, known_embeddings)
+                    similarity_scores = cosine_similarity(
+                        face_embedding, known_embeddings
+                    )
+
                 if np.max(similarity_scores) < THRESHOLD:
                     predicted_name = "Unknown"
 
@@ -301,9 +330,11 @@ while True:
                 else:
                     detected_name = predicted_name
                     detected_time = current_time
+                del face_embedding, face_tensor, face, face_resized
 
     cv2.imshow("Face Recognition", frame_with_background)
 
+    gc.collect()
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 

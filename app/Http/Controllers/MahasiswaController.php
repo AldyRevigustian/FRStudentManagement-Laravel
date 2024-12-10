@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Mahasiswa;
 use App\Models\Kelas;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class MahasiswaController extends Controller
 {
@@ -75,35 +76,28 @@ class MahasiswaController extends Controller
         return redirect()->route('mahasiswa.index')->with('success', 'Mahasiswa berhasil ditambahkan');
     }
 
-    public function edit($id)
+    public function show($id)
     {
         $mahasiswa = Mahasiswa::findOrFail($id);
-        $kelas = Kelas::all(); // Ambil semua kelas
+        $kelas = Kelas::all();
 
-        return view('mahasiswa.edit', compact('mahasiswa', 'kelas'));
-    }
-
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'nama' => 'required|string|max:255',
-            'kelas_id' => 'required|exists:kelas,id',
-        ]);
-
-
-        $mahasiswa = Mahasiswa::findOrFail($id);
-        $mahasiswa->update([
-            'id' => $request->nim,
-            'nama' => $request->nama,
-            'kelas_id' => $request->kelas_id,
-        ]);
-
-        return redirect()->route('mahasiswa.index')->with('success', 'Mahasiswa berhasil diedit');
+        return view('mahasiswa.view', compact('mahasiswa', 'kelas'));
     }
 
     public function destroy($id)
     {
         $mahasiswa = Mahasiswa::findOrFail($id);
+
+        $path = base_path("scripts/Images/{$id}/");
+        $path2 = base_path("scripts/Images/Augmented_Images/{$id}/");
+
+        if (File::exists($path) && File::isDirectory($path)) {
+            File::deleteDirectory($path);
+        }
+
+        if (File::exists($path2) && File::isDirectory($path2)) {
+            File::deleteDirectory($path2);
+        }
         $mahasiswa->delete();
 
         return redirect()->route('mahasiswa.index')->with('success', 'Mahasiswa berhasil dihapus');

@@ -36,13 +36,11 @@
                                     <td>{{ $mahasiswa->nama }}</td>
                                     <td>{{ $mahasiswa->kelas->nama }}</td>
                                     <td class="flex space-x-2">
-                                        <!-- Edit Button -->
-                                        <a href="{{ route('mahasiswa.edit', $mahasiswa->id) }}"
-                                            class="inline-flex items-center px-3 py-1.5 bg-yellow-600 text-white text-xs font-semibold rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2">
-                                            Edit
+                                        <a href="{{ route('mahasiswa.show', $mahasiswa->id) }}"
+                                            class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2">
+                                            Show
                                         </a>
 
-                                        <!-- Delete Button -->
                                         <form action="{{ route('mahasiswa.destroy', $mahasiswa->id) }}" method="POST"
                                             style="display:inline;">
                                             @csrf

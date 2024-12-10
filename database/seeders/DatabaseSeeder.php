@@ -45,12 +45,6 @@ class DatabaseSeeder extends Seeder
             'kelas_id' => 1,
             'is_trained' => 0
         ]);
-        Mahasiswa::create([
-            'id' => 2702303719,
-            'nama' => 'Kotone',
-            'kelas_id' => 1,
-            'is_trained' => 0
-        ]);
 
         Absensi::create([
             'tanggal' => '2024-12-01 12:30:20 ',
@@ -65,5 +59,6 @@ class DatabaseSeeder extends Seeder
             'mata_kuliah_id' => 1,
             'mahasiswa_id' => 2702303717
         ]);
+
     }
 }

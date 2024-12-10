@@ -8,6 +8,16 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrainingController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/images/{id}/{filename}', function ($id, $filename) {
+    $path = base_path("scripts/Images/{$id}/{$filename}");
+
+    if (!file_exists($path)) {
+        abort(404); // Gambar tidak ditemukan
+    }
+
+    return response()->file($path);
+});
+
 Route::get('/', function () {
     return redirect('/dashboard');
 });

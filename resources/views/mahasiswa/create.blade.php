@@ -62,7 +62,7 @@
                         </div>
 
                         <button type="submit" id="submit" disabled
-                            class="inline-flex items-center px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
+                            class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-400 text-black text-sm font-semibold rounded-md focus:outline-none mb-4">
                             Simpan
                         </button>
 

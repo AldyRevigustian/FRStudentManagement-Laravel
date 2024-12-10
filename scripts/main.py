@@ -1,7 +1,9 @@
+import warnings
 from face_recognition_system import FaceRecognitionSystem
 
 
 def main():
+    warnings.filterwarnings("ignore", category=FutureWarning)
     try:
         system = FaceRecognitionSystem()
         system.run()

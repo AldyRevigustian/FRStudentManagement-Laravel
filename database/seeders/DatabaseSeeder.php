@@ -27,38 +27,56 @@ class DatabaseSeeder extends Seeder
         MataKuliah::create(['nama' => 'Database Technology']);
         MataKuliah::create(['nama' => 'Object Oriented Programming']);
 
+        // Mahasiswa::create([
+        //     'id' => 2702303716,
+        //     'nama' => 'Chaewon',
+        //     'kelas_id' => 1,
+        //     'is_trained' => 0
+        // ]);
+        // Mahasiswa::create([
+        //     'id' => 2702303717,
+        //     'nama' => 'Kaede',
+        //     'kelas_id' => 1,
+        //     'is_trained' => 0
+        // ]);
+        // Mahasiswa::create([
+        //     'id' => 2702303718,
+        //     'nama' => 'Shion',
+        //     'kelas_id' => 1,
+        //     'is_trained' => 0
+        // ]);
+        // Mahasiswa::create([
+        //     'id' => 2702303719,
+        //     'nama' => 'Kotone',
+        //     'kelas_id' => 1,
+        //     'is_trained' => 0
+        // ]);
+
         Mahasiswa::create([
-            'id' => 2702303716,
-            'nama' => 'Chaewon',
+            'id' => 2702320860,
+            'nama' => 'Arthaz Antony',
             'kelas_id' => 1,
             'is_trained' => 0
         ]);
         Mahasiswa::create([
-            'id' => 2702303717,
-            'nama' => 'Kaede',
-            'kelas_id' => 1,
-            'is_trained' => 0
-        ]);
-        Mahasiswa::create([
-            'id' => 2702303718,
-            'nama' => 'Shion',
+            'id' => 2702303633,
+            'nama' => 'Shem Josh Lowell',
             'kelas_id' => 1,
             'is_trained' => 0
         ]);
 
-        Absensi::create([
-            'tanggal' => '2024-12-01 12:30:20 ',
-            'kelas_id' => 1,
-            'mata_kuliah_id' => 1,
-            'mahasiswa_id' => 2702303716
-        ]);
+        // Absensi::create([
+        //     'tanggal' => '2024-12-01 12:30:20',
+        //     'kelas_id' => 1,
+        //     'mata_kuliah_id' => 1,
+        //     'mahasiswa_id' => 2702303716
+        // ]);
 
-        Absensi::create([
-            'tanggal' => '2024-12-01 10:20:10',
-            'kelas_id' => 1,
-            'mata_kuliah_id' => 1,
-            'mahasiswa_id' => 2702303717
-        ]);
-
+        // Absensi::create([
+        //     'tanggal' => '2024-12-01 10:20:10',
+        //     'kelas_id' => 1,
+        //     'mata_kuliah_id' => 1,
+        //     'mahasiswa_id' => 2702303717
+        // ]);
     }
 }

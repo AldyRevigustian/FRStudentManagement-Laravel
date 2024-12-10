@@ -62,7 +62,12 @@ class FaceRecognitionSystem:
         self.cursor = self.conn.cursor()
 
     def initialize_models(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            self.device = torch.device("cuda:0")
+            torch.cuda.set_device(self.device)
+
         self.inception_resnet = (
             InceptionResnetV1(pretrained="vggface2").eval().to(self.device)
         )
@@ -81,6 +86,8 @@ class FaceRecognitionSystem:
             selection_method="largest",
             post_process=False,
         )
+
+        self.embedding_cache = {}
 
     def setup_camera(self):
         self.cap = cv2.VideoCapture(0)
@@ -114,6 +121,9 @@ class FaceRecognitionSystem:
         self.current_student_info = None
         self.current_student_img = None
         self.frame_counter = 0
+        self.max_cache_size = 1000
+        # self.cache_cleanup_threshold = 0.8
+
 
     def get_student_info(self, predicted_name):
         try:
@@ -207,7 +217,8 @@ class FaceRecognitionSystem:
         if face.size == 0:
             return None
 
-        face_resized = cv2.resize(face, (160, 160))
+        face_resized = cv2.resize(face, (160, 160), interpolation=cv2.INTER_LINEAR)
+
         face_tensor = (
             torch.from_numpy(face_resized).permute(2, 0, 1).float() / 255.0
         ).to(self.device)
@@ -224,10 +235,24 @@ class FaceRecognitionSystem:
 
             similarity_scores = cosine_similarity(face_embedding, self.known_embeddings)
 
+        embedding_key = str(face_embedding.tobytes())
+        if embedding_key in self.embedding_cache:
+            predicted_name = self.embedding_cache[embedding_key]
+        else:
+            predicted_label = self.svm_model.predict(face_embedding)[0]
+            predicted_name = self.label_encoder_classes[predicted_label]
+            if len(self.embedding_cache) > self.max_cache_size:
+                self.embedding_cache.clear()
+            self.embedding_cache[embedding_key] = predicted_name
+
         if np.max(similarity_scores) < self.THRESHOLD:
             predicted_name = "Unknown"
 
         bbox = (160 + x_min, 320 + y_min, 180 + x_max, 330 + y_max)
+
+        if self.device != "cpu" and self.frame_counter % 30 == 0:
+            torch.cuda.empty_cache()
+
         return predicted_name, bbox, face_embedding, face_tensor, face, face_resized
 
     def update_display(self, frame_with_background):
@@ -379,15 +404,19 @@ class FaceRecognitionSystem:
                 frame_with_background = self.process_frame(frame, current_time)
                 cv2.imshow("Face Recognition", frame_with_background)
 
-                gc.collect()
+                # gc.collect()
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
+
+                if self.frame_counter % 100 == 0:
+                    gc.collect()
 
         finally:
             self.cleanup()
 
     def cleanup(self):
-        self.conn.close()
-        self.cursor.close()
         self.cap.release()
-        cv2.destroyAllWindows
+        cv2.destroyAllWindows()
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()

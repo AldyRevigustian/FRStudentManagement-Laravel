@@ -32,7 +32,7 @@ class AbsensiController extends Controller
         $course_name = MataKuliah::findOrFail($course_id)->nama;
 
         $pythonPath = 'C:/Users/Asus/AppData/Local/Programs/Python/Python310/python.exe';
-        $scriptPath = 'D:/Project/StudentManagement/scripts/testin.py';
+        $scriptPath = 'D:/Project/StudentManagement/scripts/main.py';
 
         $command = [
             'C:/Program Files/Git/bin/bash.exe',

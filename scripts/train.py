@@ -77,7 +77,7 @@ for faces, label in dataloader:
             known_face_embeddings.append(
                 inception_resnet(faces[0].unsqueeze(0).to(device)).detach().cpu().numpy()
             )
-            labels.append(label.numpy())
+            labels.append(label.cpu().numpy())
         except Exception as e:
             print(f"Error processing batch: {e}")
             continue

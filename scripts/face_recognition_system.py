@@ -353,7 +353,7 @@ class FaceRecognitionSystem:
                             print(studentInfo)
 
                             if studentInfo[6] == self.selected_class_name:
-                                imgPath = f"D:/Project/StudentManagement/scripts/Images/{predicted_name}/0.jpg"
+                                imgPath = f"D:/Project/StudentManagement/scripts/Images/{predicted_name}/profile.jpg"
                                 if not os.path.exists(imgPath):
                                     print(
                                         f"Error: No such file '{imgPath}' in local storage."

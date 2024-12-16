@@ -26,6 +26,7 @@ seq = iaa.Sequential(
 dataset_dir = "D:/Project/StudentManagement/scripts/Images"
 output_dir = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
 
+
 def detect_and_crop_face(image_path):
     img = Image.open(image_path)
     if img.mode != "RGB":
@@ -44,6 +45,53 @@ def detect_and_crop_face(image_path):
     else:
         return None
 
+
+def crop_profile(image_path, padding=0.5):
+    img = Image.open(image_path)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    img_rgb = np.array(img)
+    boxes, probs = detector.detect(img_rgb)
+
+    if boxes is not None and len(boxes) > 0:
+        box = boxes[0]
+        x_min, y_min, x_max, y_max = map(int, box)
+
+        width = x_max - x_min
+        height = y_max - y_min
+        pad_x = int(padding * width)
+        pad_y = int(padding * height)
+
+        x_min = max(0, x_min - pad_x)
+        y_min = max(0, y_min - pad_y)
+        x_max = min(img.width, x_max + pad_x)
+        y_max = min(img.height, y_max + pad_y)
+
+        img_cropped = img.crop((x_min, y_min, x_max, y_max))
+        img_cropped = img_cropped.resize((370, 370))
+
+        img_cropped_rgb = np.array(img_cropped)
+        boxes_cropped, probs_cropped = detector.detect(img_cropped_rgb)
+
+        if boxes_cropped is None or len(boxes_cropped) == 0:
+            return None
+
+        print("Wajah terdeteksi")
+        return img_cropped
+    else:
+        return None
+
+def save_profile(person_name):
+    person_folder = os.path.join(dataset_dir, person_name)
+    images = [f for f in os.listdir(person_folder) if f.endswith(".jpg")]
+
+    for image_filename in images:
+        image_path = os.path.join(person_folder, image_filename)
+        cropped = crop_profile(image_path)
+        if cropped is not None:
+            cropped.save(os.path.join(person_folder, "profile.jpg"))
+            break
 
 def augment_and_save(face, person_name, base_filename, num_augments=10):
     person_folder = os.path.join(output_dir, person_name)
@@ -133,6 +181,7 @@ for person_name in os.listdir(dataset_dir):
     if os.path.isdir(person_folder):
         print(person_name)
         process_person_images(person_name)
+        save_profile(person_name)
 
 delete_images_without_faces(output_dir)
 print("Augmentasi selesai.")

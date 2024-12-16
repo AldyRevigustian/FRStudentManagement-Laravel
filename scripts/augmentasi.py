@@ -82,6 +82,7 @@ def crop_profile(image_path, padding=0.5):
     else:
         return None
 
+
 def save_profile(person_name):
     person_folder = os.path.join(dataset_dir, person_name)
     images = [f for f in os.listdir(person_folder) if f.endswith(".jpg")]
@@ -92,6 +93,7 @@ def save_profile(person_name):
         if cropped is not None:
             cropped.save(os.path.join(person_folder, "profile.jpg"))
             break
+
 
 def augment_and_save(face, person_name, base_filename, num_augments=10):
     person_folder = os.path.join(output_dir, person_name)
@@ -144,6 +146,8 @@ def process_person_images(person_name):
     images = [f for f in os.listdir(person_folder) if f.endswith(".jpg")]
 
     for image_filename in images:
+        if image_filename == "profile.jpg":
+            continue
         image_path = os.path.join(person_folder, image_filename)
         face = detect_and_crop_face(image_path)
 

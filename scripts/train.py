@@ -8,24 +8,22 @@ from sklearn.svm import SVC
 from PIL import Image
 import joblib
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-mtcnn = MTCNN(keep_all=True, device=device)
-inception_resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
-dataset_path = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
-
 
 class FaceDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, mtcnn, transform=None):
         self.root_dir = root_dir
         self.transform = transform
+        self.mtcnn = mtcnn
         self.image_paths = []
         self.labels = []
         self.label_encoder = LabelEncoder()
 
-        for person_name in os.listdir(root_dir):
-            person_folder = os.path.join(root_dir, person_name)
+        self._load_dataset()
+
+    def _load_dataset(self):
+        """Load dataset and encode labels"""
+        for person_name in os.listdir(self.root_dir):
+            person_folder = os.path.join(self.root_dir, person_name)
             if os.path.isdir(person_folder):
                 for img_name in os.listdir(person_folder):
                     img_path = os.path.join(person_folder, img_name)
@@ -50,7 +48,7 @@ class FaceDataset(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        faces, probs = mtcnn(img, return_prob=True)
+        faces, probs = self.mtcnn(img, return_prob=True)
 
         if faces is not None and len(faces) > 0:
             face = faces[0]
@@ -60,50 +58,103 @@ class FaceDataset(Dataset):
             return None, None
 
 
-dataset = FaceDataset(dataset_path)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+class FaceRecognitionTrainer:
+    def __init__(self, dataset_path, model_save_path):
+        self.dataset_path = dataset_path
+        self.model_save_path = model_save_path
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-face_embeddings = []
-labels = []
-failed_images = []
-known_face_embeddings = []
+        self.mtcnn = MTCNN(keep_all=True, device=self.device)
+        self.inception_resnet = (
+            InceptionResnetV1(pretrained="vggface2").eval().to(self.device)
+        )
 
-for faces, label in dataloader:
-    if faces is not None:
-        try:
-            faces = faces.to(device)
-            embeddings = inception_resnet(faces)
-            face_embeddings.append(embeddings.detach().cpu().numpy())
-            known_face_embeddings.append(
-                inception_resnet(faces[0].unsqueeze(0).to(device)).detach().cpu().numpy()
-            )
-            labels.append(label.cpu().numpy())
-        except Exception as e:
-            print(f"Error processing batch: {e}")
-            continue
+        self.face_embeddings = []
+        self.labels = []
+        self.failed_images = []
+        self.known_face_embeddings = []
+
+        print(f"Using device: {self.device}")
+
+    def _create_data_loader(self, batch_size=32):
+        dataset = FaceDataset(self.dataset_path, self.mtcnn)
+        return DataLoader(dataset, batch_size=batch_size, shuffle=True), dataset
+
+    def _process_batch(self, faces, label):
+        if faces is not None:
+            try:
+                faces = faces.to(self.device)
+                embeddings = self.inception_resnet(faces)
+                self.face_embeddings.append(embeddings.detach().cpu().numpy())
+                self.known_face_embeddings.append(
+                    self.inception_resnet(faces[0].unsqueeze(0).to(self.device))
+                    .detach()
+                    .cpu()
+                    .numpy()
+                )
+                self.labels.append(label.cpu().numpy())
+            except Exception as e:
+                print(f"Error processing batch: {e}")
+                return False
+            return True
+        else:
+            self.failed_images.append(label)
+            return False
+
+    def _prepare_data(self):
+        if not self.face_embeddings or not self.labels:
+            print("No data available for training. Please check your dataset.")
+            return None, None
+
+        known_face_embeddings = np.vstack(self.known_face_embeddings)
+        face_embeddings = (
+            np.vstack(self.face_embeddings) if self.face_embeddings else np.array([])
+        )
+        labels = np.concatenate(self.labels) if self.labels else np.array([])
+
+        return face_embeddings, labels
+
+    def _save_models(self, svm_model, label_encoder):
+        os.makedirs(self.model_save_path, exist_ok=True)
+
+        np.save(
+            os.path.join(self.model_save_path, "label_encoder_classes.npy"),
+            label_encoder.classes_,
+        )
+
+        np.save(
+            os.path.join(self.model_save_path, "known_face_embeddings.npy"),
+            np.vstack(self.known_face_embeddings),
+        )
+
+        joblib.dump(svm_model, os.path.join(self.model_save_path, "svm_model.pkl"))
+
+        print("Models and encodings saved successfully.")
+
+    def train(self, batch_size=32):
+        dataloader, dataset = self._create_data_loader(batch_size)
+
+        for faces, label in dataloader:
+            self._process_batch(faces, label)
+
+        face_embeddings, labels = self._prepare_data()
+        if face_embeddings is None:
+            return False
+
+        svm_model = SVC(kernel="linear", probability=True)
+        svm_model.fit(face_embeddings, labels)
+
+        self._save_models(svm_model, dataset.label_encoder)
+
+        return True
+
+
+if __name__ == "__main__":
+    dataset_path = "D:/Project/StudentManagement/scripts/Images/Augmented_Images/"
+    model_save_path = "D:/Project/StudentManagement/scripts/Model/"
+
+    trainer = FaceRecognitionTrainer(dataset_path, model_save_path)
+    if trainer.train():
+        print("Training completed successfully.")
     else:
-        failed_images.append(label)
-
-if len(face_embeddings) == 0 or len(labels) == 0:
-    print(
-        "Tidak ada data yang dapat digunakan untuk pelatihan. Cek kembali dataset Anda."
-    )
-else:
-    known_face_embeddings = np.vstack(known_face_embeddings)
-    face_embeddings = np.vstack(face_embeddings) if face_embeddings else np.array([])
-    labels = np.concatenate(labels) if labels else np.array([])
-
-    svm_model = SVC(kernel="linear", probability=True)
-    svm_model.fit(face_embeddings, labels)
-
-    np.save(
-        "D:/Project/StudentManagement/scripts/Model/label_encoder_classes.npy",
-        dataset.label_encoder.classes_,
-    )
-    np.save(
-        "D:/Project/StudentManagement/scripts/Model/known_face_embeddings.npy",
-        known_face_embeddings,
-    )
-    joblib.dump(svm_model, "D:/Project/StudentManagement/scripts/Model/svm_model.pkl")
-
-    print("Model telah dilatih dan disimpan.")
+        print("Training failed. Please check the error messages above.")

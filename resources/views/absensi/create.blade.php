@@ -26,7 +26,7 @@
 
                         <div class="mb-6">
                             <label for="matakuliah_id"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-200">Kelas</label>
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-200">Mata Kuliah</label>
                             <select name="matakuliah_id" id="matakuliah_id"
                                 class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
                                 required>

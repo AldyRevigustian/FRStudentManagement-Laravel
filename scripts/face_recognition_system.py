@@ -94,8 +94,8 @@ class FaceRecognitionSystem:
         self.cap.set(3, 960)
         self.cap.set(4, 720)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        cv2.namedWindow("Face Recognition", cv2.WINDOW_NORMAL)
-        # cv2.namedWindow("Face Recognition", cv2.WINDOW_FULLSCREEN)
+        # cv2.namedWindow("Face Recognition", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Face Recognition", cv2.WINDOW_FULLSCREEN)
         cv2.resizeWindow("Face Recognition", 1920, 1080)
 
     def load_resources(self):
@@ -112,7 +112,7 @@ class FaceRecognitionSystem:
     def initialize_variables(self):
         self.THRESHOLD = 0.7
         self.PRINT_DELAY = 1.2
-        self.MODE_DISPLAY_DURATION = 3
+        self.MODE_DISPLAY_DURATION = 2
         self.detected_name = None
         self.detected_time = None
         self.modeType = 0
